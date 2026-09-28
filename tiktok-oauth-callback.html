@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f4f6f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101312" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="data:," />
+    <title>TikTok 授权回调</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f6f5;
+        --panel: #ffffff;
+        --panel-soft: #edf2f0;
+        --text: #16201c;
+        --muted: #52605a;
+        --line: #d9e1dd;
+        --accent: #087a5b;
+        --accent-strong: #056348;
+        --accent-soft: #dff3eb;
+        --danger: #b13d32;
+        --danger-soft: #fde9e6;
+        --waiting: #8a6514;
+        --waiting-soft: #fbf1d8;
+        --shadow: 0 18px 52px rgba(28, 44, 37, 0.09);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101312;
+          --panel: #181d1b;
+          --panel-soft: #202824;
+          --text: #f2f6f4;
+          --muted: #aebbb5;
+          --line: #334039;
+          --accent: #65d5ad;
+          --accent-strong: #83e2bf;
+          --accent-soft: #163b2f;
+          --danger: #ff9b8e;
+          --danger-soft: #492521;
+          --waiting: #edc66c;
+          --waiting-soft: #3c321c;
+          --shadow: 0 24px 64px rgba(0, 0, 0, 0.32);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      html { min-height: 100%; }
+
+      body {
+        min-height: 100vh;
+        min-height: 100svh;
+        margin: 0;
+        padding: max(24px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(var(--line), var(--line)) calc(50% - 350px) 50% / 1px 180px no-repeat,
+          var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      main {
+        width: min(100%, 660px);
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .status-strip {
+        height: 5px;
+        background: var(--waiting);
+      }
+
+      .card[data-status="success"] .status-strip { background: var(--accent); }
+      .card[data-status="error"] .status-strip { background: var(--danger); }
+
+      .content {
+        padding: clamp(26px, 6vw, 46px);
+      }
+
+      .status-icon {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 22px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        color: var(--waiting);
+        background: var(--waiting-soft);
+      }
+
+      .card[data-status="success"] .status-icon {
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .card[data-status="error"] .status-icon {
+        color: var(--danger);
+        background: var(--danger-soft);
+      }
+
+      .status-icon svg { width: 25px; height: 25px; }
+
+      h1 {
+        margin: 0;
+        font-family: ui-serif, Georgia, "Songti SC", "STSong", serif;
+        font-size: clamp(30px, 7vw, 44px);
+        line-height: 1.12;
+        letter-spacing: -0.035em;
+        font-weight: 650;
+      }
+
+      .lead {
+        margin: 14px 0 0;
+        max-width: 52ch;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      .result {
+        margin-top: 30px;
+        padding-top: 28px;
+        border-top: 1px solid var(--line);
+      }
+
+      .label {
+        display: block;
+        margin-bottom: 9px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+
+      .code-wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: stretch;
+      }
+
+      .code-box {
+        min-width: 0;
+        padding: 15px 16px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel-soft);
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+        user-select: all;
+      }
+
+      button {
+        min-width: 92px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #ffffff;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 750;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      button:hover { background: var(--accent-strong); }
+      button:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 3px; }
+
+      .next-step {
+        margin: 18px 0 0;
+        padding: 15px 16px;
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .next-step strong { color: var(--accent-strong); }
+
+      .meta {
+        margin-top: 22px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .meta-row {
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: 12px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .meta-row dt { font-weight: 700; }
+      .meta-row dd { margin: 0; overflow-wrap: anywhere; }
+
+      .error-detail {
+        margin: 0;
+        padding: 16px;
+        border-radius: 10px;
+        background: var(--danger-soft);
+        color: var(--text);
+        font-size: 14px;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+      }
+
+      .footnote {
+        margin: 18px 4px 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+        text-align: center;
+      }
+
+      [hidden] { display: none !important; }
+
+      @media (max-width: 520px) {
+        body { place-items: start center; background: var(--bg); }
+        main { margin-top: 4vh; }
+        .card { border-radius: 18px; }
+        .content { padding: 28px 22px 26px; }
+        .code-wrap { grid-template-columns: 1fr; }
+        button { min-height: 48px; }
+        .meta-row { grid-template-columns: 1fr; gap: 2px; }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .card { animation: settle 320ms ease-out both; }
+        @keyframes settle {
+          from { opacity: 0; transform: translateY(5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main aria-live="polite">
+      <section class="card" id="card" data-status="waiting" aria-labelledby="status-title">
+        <div class="status-strip" aria-hidden="true"></div>
+        <div class="content">
+          <div class="status-icon" id="status-icon" aria-hidden="true">
+            <svg id="icon-waiting" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 7v5l3 2"></path>
+            </svg>
+            <svg id="icon-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" hidden>
+              <path d="M5 12.5l4.2 4L19 7"></path>
+            </svg>
+            <svg id="icon-error" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" hidden>
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 7v6"></path>
+              <path d="M12 17h.01"></path>
+            </svg>
+          </div>
+
+          <h1 id="status-title">正在等待 TikTok 授权</h1>
+          <p class="lead" id="status-message">请先从 TikTok 授权页面完成操作。完成后，页面会自动显示授权结果。</p>
+
+          <div class="result" id="success-result" hidden>
+            <span class="label">授权码</span>
+            <div class="code-wrap">
+              <div class="code-box" id="code-value" role="textbox" aria-readonly="true" tabindex="0"></div>
+              <button type="button" id="copy-button">复制授权码</button>
+            </div>
+            <p class="next-step"><strong>下一步：</strong>复制上面的授权码，发送给 Muse。不要把授权码发给其他人。</p>
+            <dl class="meta" id="state-row" hidden>
+              <div class="meta-row">
+                <dt>会话标识</dt>
+                <dd id="state-value"></dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="result" id="error-result" hidden>
+            <p class="error-detail" id="error-detail"></p>
+          </div>
+        </div>
+      </section>
+      <p class="footnote">授权信息只显示在当前页面，不会由本页自动发送。</p>
+    </main>
+
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var code = params.get("code");
+        var state = params.get("state");
+        var error = params.get("error");
+        var errorDescription = params.get("error_description");
+
+        var card = document.getElementById("card");
+        var title = document.getElementById("status-title");
+        var message = document.getElementById("status-message");
+        var successResult = document.getElementById("success-result");
+        var errorResult = document.getElementById("error-result");
+        var codeValue = document.getElementById("code-value");
+        var stateRow = document.getElementById("state-row");
+        var stateValue = document.getElementById("state-value");
+        var copyButton = document.getElementById("copy-button");
+        var waitingIcon = document.getElementById("icon-waiting");
+        var successIcon = document.getElementById("icon-success");
+        var errorIcon = document.getElementById("icon-error");
+
+        function showIcon(which) {
+          waitingIcon.hidden = which !== "waiting";
+          successIcon.hidden = which !== "success";
+          errorIcon.hidden = which !== "error";
+        }
+
+        function fallbackCopy(text) {
+          var area = document.createElement("textarea");
+          area.value = text;
+          area.setAttribute("readonly", "");
+          area.style.position = "fixed";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          var copied = document.execCommand("copy");
+          document.body.removeChild(area);
+          return copied;
+        }
+
+        function setCopyFeedback(text) {
+          copyButton.textContent = text;
+          window.setTimeout(function () {
+            copyButton.textContent = "复制授权码";
+          }, 1800);
+        }
+
+        if (code) {
+          card.dataset.status = "success";
+          showIcon("success");
+          title.textContent = "授权成功";
+          message.textContent = "TikTok 已返回授权码。请完成下面最后一步。";
+          codeValue.textContent = code;
+          successResult.hidden = false;
+
+          if (state) {
+            stateValue.textContent = state;
+            stateRow.hidden = false;
+          }
+
+          copyButton.addEventListener("click", function () {
+            if (navigator.clipboard && window.isSecureContext) {
+              navigator.clipboard.writeText(code).then(function () {
+                setCopyFeedback("已复制");
+              }).catch(function () {
+                setCopyFeedback(fallbackCopy(code) ? "已复制" : "请手动复制");
+              });
+            } else {
+              setCopyFeedback(fallbackCopy(code) ? "已复制" : "请手动复制");
+            }
+          });
+        } else if (error) {
+          card.dataset.status = "error";
+          showIcon("error");
+          title.textContent = "授权未完成";
+          message.textContent = "TikTok 没有返回授权码。你可以返回授权页面后重试。";
+          var detail = errorDescription ? errorDescription + "（" + error + "）" : error;
+          document.getElementById("error-detail").textContent = "错误信息：" + detail;
+          errorResult.hidden = false;
+        }
+      })();
+    </script>
+  </body>
+</html>
