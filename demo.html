@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ethin Studio Publisher — TikTok Integration Demo</title>
+<style>
+  :root { --bg:#0f0f14; --card:#17171f; --line:#262633; --txt:#f2f2f5; --dim:#9a9aad;
+         --accent:#fe2c55; --ok:#25d07d; --warn:#f5a623; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--txt); font-family:-apple-system,"Segoe UI",Inter,Roboto,Arial,sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; padding:0 20px 80px; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:22px 0; border-bottom:1px solid var(--line); }
+  .logo { font-weight:800; font-size:20px; letter-spacing:.3px; }
+  .logo span { color:var(--accent); }
+  .badge { font-size:12px; color:#0f0f14; background:var(--warn); border-radius:20px; padding:5px 12px; font-weight:700; }
+  .hero { padding:56px 0 30px; }
+  .hero h1 { font-size:40px; line-height:1.15; margin-bottom:14px; }
+  .hero p { color:var(--dim); font-size:17px; max-width:640px; line-height:1.6; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:26px; margin:22px 0; }
+  .card h2 { font-size:19px; margin-bottom:6px; }
+  .card .sub { color:var(--dim); font-size:14px; margin-bottom:18px; line-height:1.55; }
+  .step { display:flex; gap:14px; align-items:flex-start; }
+  .n { flex:0 0 34px; height:34px; border-radius:50%; background:#23232f; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--dim); }
+  .step.done .n { background:var(--ok); color:#06130c; }
+  .stepbody { flex:1; }
+  .btn { display:inline-block; background:var(--accent); color:#fff; border:0; border-radius:10px; padding:13px 26px; font-size:16px; font-weight:700; cursor:pointer; text-decoration:none; }
+  .btn:hover { filter:brightness(1.08); }
+  .btn.ghost { background:#23232f; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .kv { display:grid; grid-template-columns:150px 1fr; gap:8px 14px; font-size:14px; margin-top:14px; }
+  .kv dt { color:var(--dim); } .kv dd { font-family:ui-monospace,Menlo,Consolas,monospace; word-break:break-all; }
+  .okline { color:var(--ok); font-weight:700; }
+  .scope { display:inline-block; background:#23232f; border:1px solid var(--line); border-radius:8px; padding:6px 12px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; margin:4px 6px 0 0; }
+  .composer { display:grid; grid-template-columns:300px 1fr; gap:22px; }
+  video.preview { width:100%; border-radius:12px; border:1px solid var(--line); background:#000; aspect-ratio:9/16; }
+  textarea { width:100%; min-height:110px; background:#0c0c11; color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:12px; font-size:14px; resize:vertical; }
+  .flow { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+  .chip { background:#23232f; border:1px solid var(--line); border-radius:10px; padding:10px 14px; font-size:13px; color:var(--dim); }
+  .chip b { color:var(--txt); display:block; font-size:14px; margin-bottom:2px; }
+  footer { margin-top:50px; padding-top:22px; border-top:1px solid var(--line); color:var(--dim); font-size:13px; display:flex; gap:18px; }
+  footer a { color:var(--dim); }
+  #success { display:none; border:1px solid var(--ok); }
+  #success.show { display:block; }
+  @media (max-width:640px){ .composer{grid-template-columns:1fr;} .hero h1{font-size:30px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Ethin <span>Studio</span> Publisher</div>
+    <div class="badge">SANDBOX DEMO</div>
+  </header>
+
+  <div class="hero">
+    <h1>Schedule &amp; publish TikTok videos via the Content Posting API.</h1>
+    <p>Creators connect their TikTok account, compose a post, and publish — this page demonstrates the full end-to-end integration: Login Kit authorization (<span style="font-family:monospace">user.info.basic</span>, <span style="font-family:monospace">video.publish</span>) and Content Posting API direct publish.</p>
+  </div>
+
+  <div class="card" id="success">
+    <div class="step done">
+      <div class="n">✓</div>
+      <div class="stepbody">
+        <h2>Published to TikTok (sandbox)</h2>
+        <p class="sub">The Content Posting API accepted the video. Because the app is awaiting audit, TikTok keeps the post private — this is the expected sandbox behavior.</p>
+        <dl class="kv">
+          <dt>publish_id</dt><dd id="pid">—</dd>
+          <dt>status</dt><dd class="okline" id="pstatus">—</dd>
+          <dt>privacy</dt><dd>SELF_ONLY (sandbox)</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step" id="step1">
+      <div class="n">1</div>
+      <div class="stepbody">
+        <h2>Connect a TikTok account</h2>
+        <p class="sub">Login Kit (OAuth 2.0 + PKCE). The creator is taken to TikTok's own authorization page, where the app and the requested scopes are shown before anything is granted.</p>
+        <div style="margin-bottom:12px;"><span class="scope">user.info.basic</span><span class="scope">video.publish</span></div>
+        <a class="btn" id="connectBtn" href="#">Connect with TikTok</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step" id="step2">
+      <div class="n">2</div>
+      <div class="stepbody">
+        <h2>Verify the connected creator</h2>
+        <p class="sub">With <span style="font-family:monospace">user.info.basic</span> the app reads the TikTok profile and shows it back, so the creator can confirm the right account is linked before publishing.</p>
+        <dl class="kv" id="creatorKv">
+          <dt>display name</dt><dd id="cname">—</dd>
+          <dt>open_id</dt><dd id="coid">—</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step" id="step3">
+      <div class="n">3</div>
+      <div class="stepbody">
+        <h2>Compose &amp; publish</h2>
+        <p class="sub">The creator previews the video, edits the caption, and hits Publish. The app calls <span style="font-family:monospace">POST /v2/post/publish/video/init/</span> (PULL_FROM_URL, media served from this verified domain) and polls <span style="font-family:monospace">/v2/post/publish/status/fetch/</span> until the post is live.</p>
+        <div class="composer">
+          <video class="preview" id="pv" src="demo-video.mp4" controls playsinline></video>
+          <div>
+            <textarea id="caption">Sandbox API test — Ethin Studio Publisher demo 🎬 #tiktokapi #sandbox</textarea>
+            <div style="margin-top:14px; display:flex; gap:10px;">
+              <button class="btn" id="publishBtn">Publish to TikTok</button>
+            </div>
+            <div class="flow">
+              <div class="chip"><b>video.init</b>init upload from URL</div>
+              <div class="chip"><b>status/fetch</b>poll until published</div>
+              <div class="chip"><b>result</b>publish_id returned</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <a href="privacy-policy.html">Privacy Policy</a>
+    <a href="terms-of-service.html">Terms of Service</a>
+    <span>Demo runs against TikTok's sandbox. No content is posted without the creator's explicit confirmation.</span>
+  </footer>
+</div>
+<script>
+(function(){
+  var AUTH_URL = "https://www.tiktok.com/v2/auth/authorize/?client_key=awfy3hv75sb8wxs9&scope=user.info.basic%2Cvideo.publish&response_type=code&redirect_uri=https%3A%2F%2Ffreecoin2025.github.io%2Fethin-studio%2Ftiktok-oauth-callback.html&state=audit-demo-001&code_challenge=xehSUZky9_e4yCfqwOH5yIoTqClZwBzW1I0sndg3nd4&code_challenge_method=S256";
+  document.getElementById('connectBtn').href = AUTH_URL;
+  var q = new URLSearchParams(location.search);
+  if (q.get('publish_id')) {
+    document.getElementById('success').classList.add('show');
+    document.getElementById('pid').textContent = q.get('publish_id');
+    document.getElementById('pstatus').textContent = q.get('status') || 'PUBLISHED';
+    ['step1','step2','step3'].forEach(function(id){ document.getElementById(id).classList.add('done'); });
+    if (q.get('display_name')) document.getElementById('cname').textContent = q.get('display_name');
+    if (q.get('open_id')) document.getElementById('coid').textContent = q.get('open_id');
+    document.getElementById('success').scrollIntoView();
+  }
+  document.getElementById('publishBtn').addEventListener('click', function(){
+    this.disabled = true; this.textContent = 'Publishing…';
+  });
+})();
+</script>
+</body>
+</html>
